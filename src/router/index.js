@@ -1,35 +1,32 @@
-import { createRouter, createWebHistory } from 'vue-router';
-import Home from '../views/Home.vue';
-import CreateWorkflow from '../views/CreateWorkflow.vue';
-import CheckStatus from '../views/CheckStatus.vue';
-import TrainModel from '../views/TrainModel.vue';
+import { createRouter, createWebHistory } from 'vue-router'
 
 const routes = [
   {
     path: '/',
-    name: 'HomeView',
-    component: Home
+    name: 'Home',
+    component: () => import('../views/Home.vue')
   },
   {
     path: '/create-workflow',
     name: 'CreateWorkflow',
-    component: CreateWorkflow
+    component: () => import('../views/CreateWorkflow.vue')
   },
   {
-    path: '/check-status',
+    path: '/check-status/:id?',
     name: 'CheckStatus',
-    component: CheckStatus
+    component: () => import('../views/CheckStatus.vue'),
+    props: true
   },
   {
     path: '/train-model',
     name: 'TrainModel',
-    component: TrainModel
+    component: () => import('../views/TrainModel.vue')
   }
-];
+]
 
 const router = createRouter({
   history: createWebHistory(),
   routes
-});
+})
 
-export default router;
+export default router
