@@ -1,6 +1,15 @@
+
 <template>
   <div class="min-h-screen bg-gray-50 py-8">
     <div class="max-w-2xl mx-auto bg-white rounded-lg shadow-md p-6">
+      <!-- Ajout de la zone de notification -->
+      <div 
+        v-if="showNotification" 
+        class="mb-4 p-4 bg-green-100 text-green-700 rounded-lg"
+      >
+        Workflow créé avec succès ! Redirection dans quelques secondes...
+      </div>
+
       <h1 class="text-2xl font-bold text-gray-900 mb-6">Créer un Workflow</h1>
       
       <form @submit.prevent="createWorkflow" class="space-y-6">
@@ -139,42 +148,94 @@ import apiService from '@/services/api.service';
 export default {
   name: 'CreateWorkflow',
   data() {
-  return {
-    workflow: {
-      name: '',
-      data_source: '',
-      steps: [
-        {
-          step_type: 'data_cleaning',
-          parameters: {
-            method: 'remove_nulls',
-            techniques: [] // Tableau vide au départ
+    return {
+      workflow: {
+        name: '',
+        data_source: '',
+        steps: [
+          {
+            step_type: 'data_cleaning',
+            parameters: {
+              method: 'remove_nulls',
+              techniques: []
+            }
           }
-        }
-      ]
+        ]
+      },
+      lastWorkflowId: null,
+      showNotification: false
+    };
+  },
+  created() {
+    // Lire le cookie au chargement
+    this.lastWorkflowId = this.getCookie('lastWorkflowId');
+    if (this.lastWorkflowId) {
+      console.log('Dernier workflow créé:', this.lastWorkflowId);
     }
-  };
-},
+  },
   methods: {
+    // Méthode pour créer un cookie
+    setCookie(name, value, days = 7) {
+      const date = new Date();
+      date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+      const expires = `expires=${date.toUTCString()}`;
+      document.cookie = `${name}=${value};${expires};path=/`;
+    },
+
+    // Méthode pour lire un cookie
+    getCookie(name) {
+      const nameEQ = `${name}=`;
+      const ca = document.cookie.split(';');
+      for (let i = 0; i < ca.length; i++) {
+        let c = ca[i];
+        while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+        if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+      }
+      return null;
+    },
+
     async createWorkflow() {
       try {
         const result = await apiService.createWorkflow(this.workflow);
-        // On utilise l'ID corrigé pour la redirection
-        this.$router.push(`/check-status/${result.workflow_id}`);
+        // Stocker l'ID du workflow dans un cookie
+        this.setCookie('lastWorkflowId', result.workflow_id);
+        this.lastWorkflowId = result.workflow_id;
+        
+        // Afficher la notification
+        this.showNotification = true;
+        
+        // Fonction fléchée
+        const redirectToStatus = (id) => {
+          this.$router.push(`/check-status/${id}`);
+        };
+        
+        setTimeout(() => redirectToStatus(result.workflow_id), 3000);
+
       } catch (error) {
         console.error('Erreur:', error);
       }
     },
+
     createDefaultStep() {
-    return {
-      step_type: 'data_cleaning',
-      parameters: {
-        method: 'remove_nulls',
-        techniques: [], // Tableau vide par défaut
-        model_type: 'random_forest'
+      return {
+        step_type: 'data_cleaning',
+        parameters: {
+          method: 'remove_nulls',
+          techniques: [],
+          model_type: 'random_forest'
+        }
+      };
+    },
+
+    addStep() {
+      this.workflow.steps.push(this.createDefaultStep());
+    },
+
+    removeStep(index) {
+      if (this.workflow.steps.length > 1) {
+        this.workflow.steps.splice(index, 1);
       }
-    };
-  }
+    }
   }
 };
 </script>
